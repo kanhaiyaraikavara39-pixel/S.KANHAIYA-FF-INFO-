@@ -18,7 +18,7 @@ import base64
 
 MAIN_KEY = base64.b64decode('WWcmdGMlREV1aDYlWmNeOA==')
 MAIN_IV = base64.b64decode('Nm95WkRyMjJFM3ljaGpNJQ==')
-RELEASEVERSION = "OB54"
+RELEASEVERSION = "OB55"
 USERAGENT = "Dalvik/2.1.0 (Linux; U; Android 13; CPH2095 Build/RKQ1.211119.001)"
 SUPPORTED_REGIONS = {"IND", "BR", "US", "SAC", "NA", "SG", "RU", "ID", "TW", "VN", "TH", "ME", "PK", "CIS", "BD", "EUROPE"}
 
@@ -52,7 +52,7 @@ async def json_to_proto(json_data: str, proto_message: Message) -> bytes:
 def get_account_credentials(region: str) -> str:
     r = region.upper()
     if r == "IND":
-        return "uid=7868293003&password=S_KANHAIYA_mdlWrCkWD8aY"
+        return "uid=7894383129&password=E5DFE507443E5403ABC54B23CBB679355F8B667F4F5444D7444D9C0F9478645A"
     elif r in {"BR", "US", "SAC", "NA"}:
         return "uid=4558407324&password=SEXTY_MODS_IND_SAZJALSQB"
     else:
