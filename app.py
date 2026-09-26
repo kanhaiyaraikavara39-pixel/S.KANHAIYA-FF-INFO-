@@ -11,7 +11,9 @@ import base64
 from datetime import datetime, timedelta
 from google.protobuf import json_format
 
-# ============= =============
+# =============================================
+# PROTO IMPORTS
+# =============================================
 try:
     import FreeFire_pb2, main_pb2, AccountPersonalShow_pb2
     import GetOutfit_pb2
@@ -23,7 +25,6 @@ except ImportError as e:
 # =============================================
 # CONFIG
 # =============================================
-
 RELEASEVERSION = "OB55"
 USERAGENT = "Dalvik/2.1.0 (Linux; U; Android 14; CPH2095 Build/RKQ1.211119.001)"
 
@@ -33,70 +34,64 @@ MAIN_IV = b'6oyZDr22E3ychjM%'
 # =============================================
 # JWT TOKEN API
 # =============================================
-
-JWT_API_BASE = "https://jwt-wxun.vercel.app/token"   #JWT API BY HS MUJAHID YT
+JWT_API_BASE = "https://jwt-wxun.vercel.app/token"
 
 # =============================================
-# ACCOUNTS FOR JWT
+# ACCOUNTS FOR JWT / BOT CREDENTIALS
+# (Note: नए बॉट क्रेडेंशियल्स यहाँ अपडेट करें)
 # =============================================
-
-BD_CREDS = {
-    "uid": "7876436068", 
-    "password": "S_KANHAIYA_4xVfORsrsadG"
-}
-
-IND_CREDS = {
-    "uid": "7909620939", 
-    "password": "29F97B948710F650BE8B0B44E8F48D990F446546958C5276863A10C11392CB3A"
-}
-
-BR_CREDS = {
-    "uid": "7909630491",
-    "password": "694B9F3007E2C8760664DE3492CA2046FDE7256379820DA8263901204AF4949E"
-}
-
 ACCOUNT_CREDENTIALS = {
-    "BD": BD_CREDS,
-    "IND": IND_CREDS,
-    "BR": BR_CREDS
+    "BD": {
+        "uid": "7909525915", 
+        "password": "34C81F9795FBD7C317D56393D08AB0C64CC6301EBBFEB79B15DC248AAC04D410"
+    },
+    "IND": {
+        "uid": "7878108485", 
+        "password": "S_KANHAIYA_cCiik9Pq8RYb"
+    },
+    "BR": {
+        "uid": "7909630491",
+        "password": "694B9F3007E2C8760664DE3492CA2046FDE7256379820DA8263901204AF4949E"
+    },
+    "SG": {
+        "uid": "YOUR_SG_BOT_UID",        # यहाँ अपने SG बॉट अकाउंट का UID डालें
+        "password": "YOUR_SG_BOT_PASSWORD" # यहाँ SG बॉट अकाउंट का पासवर्ड डालें
+    }
 }
 
 # =============================================
-# 🌍
+# REGION SERVER CONFIG
 # =============================================
-
 REGION_CONFIG = {
-    "BD": {"server_url": "https://clientbp.ppmainecoonghj.com", "release_version": "OB55"},
-    "IND": {"server_url": "https://client.ind.freefiremobile.com", "release_version": "OB55"},
-    "BR": {"server_url": "https://client.us.freefiremobile.com", "release_version": "OB55"}
+    "BD": {"server_url": "https://clientbp.ppmainecoonghj.com", "release_version": RELEASEVERSION},
+    "IND": {"server_url": "https://client.ind.freefiremobile.com", "release_version": RELEASEVERSION},
+    "BR": {"server_url": "https://client.us.freefiremobile.com", "release_version": RELEASEVERSION},
+    "SG": {"server_url": "https://clientbp.ggpolar.com", "release_version": RELEASEVERSION}
 }
 
 LOGIN_URLS = {
     "BD": "https://loginbp.ppmainecoonghj.com",
     "IND": "https://loginbp.ppmainecoonghj.com",
-    "BR": "https://loginbp.ppmainecoonghj.com"
+    "BR": "https://loginbp.ppmainecoonghj.com",
+    "SG": "https://loginbp.ggpolar.com"
 }
-
-
-REGION_PRIORITY = ["BD", "IND", "BR"]
 
 # === Flask App ===
 app = Flask(__name__)
 CORS(app)
 
 # =============================================
-# In-Memory Token Cache (per container)
+# In-Memory Token Cache
 # =============================================
-
 _token_cache = {}
 
 # =============================================
 # JWT Token Function
 # =============================================
-
 async def get_jwt_token_from_api(region: str):
     cred = ACCOUNT_CREDENTIALS.get(region)
-    if not cred:
+    if not cred or not cred.get('uid') or "YOUR_" in cred.get('uid'):
+        print(f"⚠️ [{region}] Credentials missing or not configured.")
         return None
 
     url = f"{JWT_API_BASE}?uid={cred['uid']}&password={cred['password']}"
@@ -121,7 +116,7 @@ async def get_jwt_token_from_api(region: str):
                 return None
 
             api_region = data.get("region", region)
-            server_url = REGION_CONFIG.get(api_region, REGION_CONFIG["BD"])["server_url"]
+            server_url = REGION_CONFIG.get(api_region, REGION_CONFIG.get(region, {}))["server_url"]
 
             return {
                 "token": f"Bearer {token}",
@@ -134,9 +129,8 @@ async def get_jwt_token_from_api(region: str):
         return None
 
 # =============================================
-# Token Getter (with cache)
+# Token Getter (with cache & backup)
 # =============================================
-
 async def get_token(region: str):
     cached = _token_cache.get(region)
     if cached and cached.get('expires_at', 0) > time.time():
@@ -156,7 +150,10 @@ async def get_token(region: str):
 
 async def generate_token_backup(region: str):
     try:
-        cred = ACCOUNT_CREDENTIALS.get(region, ACCOUNT_CREDENTIALS["BD"])
+        cred = ACCOUNT_CREDENTIALS.get(region)
+        if not cred or not cred.get('uid') or "YOUR_" in cred.get('uid'):
+            return None
+
         account = f"uid={cred['uid']}&password={cred['password']}"
 
         token_val, open_id = await get_access_token(account)
@@ -192,11 +189,8 @@ async def generate_token_backup(region: str):
                 print(f"❌ Backup MajorLogin failed for {region}: {resp.status_code}")
                 return None
 
-            if b"Exploiting loopholes" in resp.content:
-                print(f"🚨 [{region}] Bot account (UID: {cred['uid']}) is BANNED by Garena (Reason: Exploiting loopholes)!")
-                return None
-            if b"Modifiers" in resp.content:
-                print(f"🚨 [{region}] Bot account (UID: {cred['uid']}) is BANNED by Garena (Reason: Modifiers)!")
+            if b"Exploiting loopholes" in resp.content or b"Modifiers" in resp.content:
+                print(f"🚨 [{region}] Bot account (UID: {cred['uid']}) is BANNED by Garena!")
                 return None
 
             try:
@@ -213,15 +207,15 @@ async def generate_token_backup(region: str):
 
             return {
                 'token': f"Bearer {msg.get('token','0')}",
-                'region': msg.get('lockRegion','0'),
-                'server_url': msg.get('serverUrl','0'),
+                'region': msg.get('lockRegion', region),
+                'server_url': msg.get('serverUrl', config['server_url']),
                 'expires_at': time.time() + 25200
             }
     except Exception as e:
         print(f"❌ Backup token error for {region}: {e}")
         return None
 
-# === Helper Functions ===
+# === Crypto & Helper Functions ===
 def pad(text: bytes) -> bytes:
     padding_length = AES.block_size - (len(text) % AES.block_size)
     return text + bytes([padding_length] * padding_length)
@@ -239,7 +233,7 @@ async def get_access_token(account: str):
     payload = account + "&response_type=token&client_type=2&client_secret=2ee44819e9b4598845141067b281621874d0d5d7af9d8f7e00c1e54715b7d1e3&client_id=100067"
     headers = {'User-Agent': USERAGENT, 'Content-Type': "application/x-www-form-urlencoded"}
 
-    for attempt in range(2):
+    for _ in range(2):
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 resp = await client.post(url, data=payload, headers=headers)
@@ -251,7 +245,10 @@ async def get_access_token(account: str):
             await asyncio.sleep(1)
     return None, None
 
-async def GetAccountInformation(uid, region):
+# =============================================
+# FETCH ACCOUNT INFO FROM GARENA (Direct Region)
+# =============================================
+async def GetAccountInformation(uid: int, region: str):
     try:
         token_info = await get_token(region)
         if not token_info:
@@ -260,7 +257,7 @@ async def GetAccountInformation(uid, region):
         actual_region = token_info.get('region', region)
         token = token_info['token']
         server_url = token_info['server_url']
-        config = REGION_CONFIG.get(actual_region, REGION_CONFIG["BD"])
+        config = REGION_CONFIG.get(region, REGION_CONFIG["BD"])
 
         payload = await json_to_proto(json.dumps({'a': uid, 'b': 7}), main_pb2.GetPlayerPersonalShow())
         data_enc = aes_cbc_encrypt(MAIN_KEY, MAIN_IV, payload)
@@ -280,11 +277,11 @@ async def GetAccountInformation(uid, region):
             resp = await client.post(server_url + '/GetPlayerPersonalShow', data=data_enc, headers=headers)
 
             if resp.status_code != 200:
-                print(f"⚠️ [{actual_region}] GetPlayerPersonalShow returned {resp.status_code} for UID {uid}")
+                print(f"⚠️ [{region}] GetPlayerPersonalShow returned {resp.status_code} for UID {uid}")
                 if resp.status_code in (401, 429):
                     _token_cache.pop(region, None)
                 err_type = "RATE_LIMITED" if resp.status_code == 429 else "NOT_FOUND"
-                return {"success": False, "error_type": err_type, "region": actual_region, "status_code": resp.status_code}
+                return {"success": False, "error_type": err_type, "region": region, "status_code": resp.status_code}
 
             account_info = AccountPersonalShow_pb2.AccountPersonalShowInfo()
             account_info.ParseFromString(resp.content)
@@ -304,9 +301,8 @@ async def GetAccountInformation(uid, region):
         return {"success": False, "error_type": "EXCEPTION", "region": region, "error": str(e)}
 
 # =============================================
-# HELPER
+# FORMATTING HELPERS
 # =============================================
-
 def get_item_name(item_id):
     if not item_id or item_id == "0" or item_id == 0:
         return "N/A"
@@ -352,78 +348,59 @@ def ts_to_bst(ts):
         return "N/A"
 
 # =============================================
-# MAIN API
+# MAIN API ROUTE (/player-info)
 # =============================================
-
-@app.route('/info')
-def get_full_info():
+@app.route('/player-info')
+def player_info():
     uid = request.args.get('uid')
-    requested_region = (request.args.get('region') or request.args.get('server') or '').strip().upper()
+    region = (request.args.get('region') or '').strip().upper()
 
+    # 1. वैलिडेशन: UID चेक
     if not uid:
-        return jsonify({"error": "UID required"}), 400
+        return jsonify({"status": "error", "message": "Query parameter 'uid' is required."}), 400
 
     try:
         uid_int = int(uid)
     except:
-        return jsonify({"error": "Invalid UID"}), 400
+        return jsonify({"status": "error", "message": "Invalid UID format. UID must be a number."}), 400
 
-    regions_to_try = list(REGION_PRIORITY)
-    if requested_region in regions_to_try:
-        regions_to_try.remove(requested_region)
-        regions_to_try.insert(0, requested_region)
+    # 2. वैलिडेशन: Region चेक
+    if not region:
+        return jsonify({"status": "error", "message": "Query parameter 'region' is required (e.g., SG, IND, BD, BR)."}), 400
 
-    async def try_all_regions_parallel():
-        """BD, IND, BR — Parallel with priority fallback."""
-        tasks = []
-        for region in regions_to_try:
-            tasks.append(asyncio.create_task(GetAccountInformation(uid_int, region)))
-        
-        errors = []
-        try:
-            for coro in asyncio.as_completed(tasks, timeout=20):
-                try:
-                    res = await coro
-                    if res and res.get("success"):
-                        for t in tasks:
-                            if not t.done():
-                                t.cancel()
-                        return res.get("data"), None
-                    elif res:
-                        errors.append(res)
-                except Exception as ex:
-                    errors.append({"error_type": "EXCEPTION", "error": str(ex)})
-        except asyncio.TimeoutError:
-            pass
-        
-        for t in tasks:
-            if not t.done():
-                t.cancel()
-        return None, errors
+    if region not in REGION_CONFIG:
+        return jsonify({
+            "status": "error",
+            "message": f"Region '{region}' is not supported. Supported regions: {list(REGION_CONFIG.keys())}"
+        }), 400
 
+    # 3. डायरेक्ट उस रीजन के लिए कॉल करें (कोई ऑटो-फ़ॉलबैक नहीं)
     try:
-        account_data, errors = asyncio.run(try_all_regions_parallel())
+        res = asyncio.run(GetAccountInformation(uid_int, region))
     except Exception as e:
-        print(f"❌ Global error: {e}")
-        account_data, errors = None, [{"error_type": "GLOBAL", "error": str(e)}]
+        return jsonify({"status": "error", "message": f"Internal server error: {str(e)}"}), 500
 
-    if not account_data:
-        if errors and all(e.get("error_type") == "NO_TOKEN" for e in errors):
+    if not res.get("success"):
+        err_type = res.get("error_type")
+        if err_type == "NO_TOKEN":
             return jsonify({
                 "status": "error",
-                "error": "Bot accounts unavailable or banned",
-                "message": "All bot accounts failed to authenticate with Garena. Please check server console or update guest credentials in app.py."
+                "error": f"Bot account for {region} is unavailable or banned.",
+                "message": f"Failed to authenticate bot for region {region}. Please update credentials."
             }), 503
-        if errors and all(e.get("error_type") == "RATE_LIMITED" for e in errors):
+        elif err_type == "RATE_LIMITED":
             return jsonify({
                 "status": "error",
                 "error": "Rate limited by Garena",
-                "message": "All bot accounts are currently rate limited by Garena (429). Please wait for cooldown or add more accounts."
+                "message": f"Region {region} bot is temporarily rate limited. Please try again shortly."
             }), 429
-        return jsonify({"error": "Player not found"}), 404
+        else:
+            return jsonify({
+                "status": "error",
+                "message": f"Player not found in region {region} or server returned error."
+            }), 404
 
-    used_region = account_data.get("region", "Unknown")
-
+    account_data = res["data"]
     basic = account_data.get("basicInfo", {})
     clan = account_data.get("clanBasicInfo", {})
     social = account_data.get("socialInfo", {})
@@ -442,10 +419,9 @@ def get_full_info():
         prime_level = "N/A"
 
     response = {
-        "owner": "@mujahid.py",
-        "credit": "@mujahid.py",
         "status": "success",
-        "server_used": used_region,
+        "region_queried": region,
+        "server_used": account_data.get("region", region),
         "BanStatus": account_data.get("ban_status", "❓ UNKNOWN"),
         "BasicInformation": {
             "PrimeLevel": prime_level,
@@ -509,11 +485,10 @@ def get_full_info():
 def home():
     return jsonify({
         "status": "running",
-        "version": "OB55",
-        "endpoint": "/info?uid=UID",
-        "example": "/info?uid=2084018498",
-        "priority": "BD → IND → BR",
-        "credit": "TG-- @suiiiiiiii0007 || DC-- @mujahid.py"
+        "version": RELEASEVERSION,
+        "endpoint": "/player-info?region=REGION&uid=UID",
+        "example": "/player-info?region=SG&uid=338277714",
+        "supported_regions": list(REGION_CONFIG.keys())
     })
 
 @app.route('/status')
@@ -523,10 +498,6 @@ def token_status():
         expires_in = info['expires_at'] - time.time()
         status[region] = {"has_token": True, "expires_in": f"{expires_in/3600:.1f} hours"}
     return jsonify({"total_tokens": len(_token_cache), "tokens": status})
-
-# =============================================
-# Local dev entry point
-# =============================================
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5004, debug=False)
