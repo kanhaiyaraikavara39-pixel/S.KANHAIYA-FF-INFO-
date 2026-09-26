@@ -41,8 +41,8 @@ JWT_API_BASE = "https://jwt-wxun.vercel.app/token"   #JWT API BY HS MUJAHID YT
 # =============================================
 
 BD_CREDS = {
-    "uid": "7909525915", 
-    "password": "34C81F9795FBD7C317D56393D08AB0C64CC6301EBBFEB79B15DC248AAC04D410"
+    "uid": "7876436068", 
+    "password": "S_KANHAIYA_4xVfORsrsadG"
 }
 
 IND_CREDS = {
