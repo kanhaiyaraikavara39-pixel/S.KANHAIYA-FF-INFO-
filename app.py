@@ -36,8 +36,8 @@ JWT_API_BASE = "https://ob-55-jwt-two.vercel.app/token"
 
 # आपके द्वारा दिए गए IND बॉट क्रेडेंशियल्स
 IND_BOT_CREDS = {
-    "uid": "7916211664",
-    "password": "9E1218FC47D117D8E9A5F09D4A11B52124990F99487DE2A97FD169C2D48E0759"
+    "uid": "7972549816",
+    "password": "DBEB8A7595EDACDC1D9414570B01463A573FB9805110804971622D52C4ACF63D"
 }
 
 # केवल IND सर्वर URL कॉन्फ़िगरेशन
